@@ -40,6 +40,7 @@ impl LoreReader{
             selected_language: String::new(),
         }
     }
+
     async fn init(&mut self){
         self.get_language_list().await;
         
@@ -47,8 +48,8 @@ impl LoreReader{
         println!("");
 
         self.get_champion_list().await;
-
     }
+
     async fn run(&mut self){
         self.init().await;
 
@@ -58,11 +59,10 @@ impl LoreReader{
         let lore = self.getLore().await;
 
         println!("Lore: {}", lore);
-
-        
         
         // self.get_champion().await;
     }
+
     async fn get_language_list(&mut self) {
         let languages_data: String = requestByURL(LANGUAGE_URL).await;
         let language_list: Vec<String> = serde_json::from_str(&languages_data).expect(&format!("Couldn't create a json object form the response's text."));
@@ -121,7 +121,6 @@ impl LoreReader{
                 selected_champion = closest_match;
             }
         }  
-
         self.selected_champion = selected_champion;
     }
 
@@ -142,7 +141,6 @@ impl LoreReader{
 
         lore
     }
-
 }
 
 async fn requestByURL(url: &str) -> String{
@@ -190,8 +188,6 @@ fn getClosestMatch(input: String, data: Vec<String>) -> String{
     best_match.1
 }
 
-
-
 fn get_input() -> String{
     let mut user_input = String::new();
 
@@ -201,7 +197,6 @@ fn get_input() -> String{
 
     user_input
 }
-
 
 #[tokio::main]
 async fn main() {
