@@ -23,6 +23,128 @@ const CHAMPION_DATA_URL: &str = "https://ddragon.leagueoflegends.com/cdn/%VERSIO
 const LANGUAGE_URL: &str = "https://ddragon.leagueoflegends.com/cdn/languages.json";
 const CHAMPION_LIST_URL:&str = "https://ddragon.leagueoflegends.com/cdn/%VERSION%/data/%LANGUAGE%/champion.json";
 
+
+struct LoreReader{
+    champion_list: champion::ChampionList,
+    language_list: Vec<String>,
+    selected_champion: String,
+    selected_language: String,
+}
+
+impl LoreReader{
+    fn new() -> Self{
+        Self{
+            champion_list: Default::default(),
+            language_list: Vec::new(),
+            selected_champion: String::new(),
+            selected_language: String::new(),
+        }
+    }
+    async fn init(&mut self){
+        self.get_language_list().await;
+        
+        self.ask_language();
+        println!("");
+
+        self.get_champion_list().await;
+
+    }
+    async fn run(&mut self){
+        self.init().await;
+
+        self.ask_chamption();
+        println!("");
+
+        let lore = self.getLore().await;
+
+        println!("Lore: {}", lore);
+
+        
+        
+        // self.get_champion().await;
+    }
+    async fn get_language_list(&mut self) {
+        let languages_data: String = requestByURL(LANGUAGE_URL).await;
+        let language_list: Vec<String> = serde_json::from_str(&languages_data).expect(&format!("Couldn't create a json object form the response's text."));
+        
+        self.language_list = language_list.clone();
+    }
+
+    fn ask_language(&mut self){
+        if self.language_list.is_empty(){
+            panic!("Yikes, the language_list is empty");
+        }
+        let mut selected_language = String::new();
+
+        while selected_language == String::new(){
+            for lang in self.language_list.chunks(5){
+                let s = format!("{:02?}", lang).replace('"', "").replace("[", "").replace("]", "").replace(" ", "  ");
+
+                println!("{}",s);
+            }
+            println!("Please choose a language from the list above ^:");
+
+            let user_input = get_input();
+
+            let closest_match = getClosestMatch(user_input, self.language_list.clone());
+            if closest_match == String::new(){
+                println!("Failes to recognise the selected_language.");
+            }else{
+                selected_language = closest_match;
+            }
+        }
+        self.selected_language = selected_language;
+    }
+
+    async fn get_champion_list(&mut self){
+        let url = CHAMPION_LIST_URL.replace("%LANGUAGE%", &self.selected_language).replace("%VERSION%", DDRAGON_VERSION);
+
+        let champion_data: String = requestByURL(&url).await;
+
+        let champion_list: champion::ChampionList = serde_json::from_str(&champion_data).unwrap();
+        
+        self.champion_list = champion_list;
+    }
+
+    fn ask_chamption(&mut self){
+        let mut selected_champion = String::new();
+
+        while selected_champion == String::new(){
+            println!("Please input a champion name:"); 
+            let user_input = get_input();
+
+            let closest_match = getClosestMatch(user_input, self.champion_list.data.keys().cloned().collect());
+
+            if closest_match == String::new(){
+                println!("Failed to recognise the selected champion.");
+            }else{
+                selected_champion = closest_match;
+            }
+        }  
+
+        self.selected_champion = selected_champion;
+    }
+
+    async fn getLore(&self,) -> String{
+        if self.selected_champion == String::new(){
+            return "Could not get the lore of a champ with empty name".to_string()
+        }
+        let url: String = CHAMPION_DATA_URL
+                            .replace("%CHAMPION%", &self.selected_champion)
+                            .replace("%LANGUAGE%", &self.selected_language)
+                            .replace("%VERSION%", DDRAGON_VERSION);
+
+        let response_text: String = requestByURL(&url).await;
+
+        let json_object: Value = serde_json::from_str(&response_text).expect(&format!("Couldn't create a json object form the response's text."));
+
+        let lore: String = json_object["data"][self.selected_champion.clone()]["lore"].to_string();
+
+        lore
+    }
+
+}
+
 async fn requestByURL(url: &str) -> String{
     let r: reqwest::Response = reqwest::get(url).await.expect(&format!("Couldn't get a response for the given url: \n {}.", url));
 
@@ -37,10 +159,10 @@ async fn requestByURL(url: &str) -> String{
 }
 
 fn getClosestMatch(input: String, data: Vec<String>) -> String{
-
     fn newBestMatch(score: isize, name: &str) -> (isize, String) {
         (score, name.to_string())
     }
+
     let mut best_match: (isize, String) = (0, String::new());
 
     for i in data.iter(){
@@ -63,28 +185,12 @@ fn getClosestMatch(input: String, data: Vec<String>) -> String{
             break
         }
     }
-
     println!("Best match: {}", best_match.1);
+
     best_match.1
 }
 
-async fn getLore(champion: &str, language: &str) -> String{
-    if champion == ""{
-        return "Could not get the lore of a champ with empty name".to_string()
-    }
-    let url: String = CHAMPION_DATA_URL
-                        .replace("%CHAMPION%", champion)
-                        .replace("%LANGUAGE%", language)
-                        .replace("%VERSION%", DDRAGON_VERSION);
 
-    let response_text: String = requestByURL(&url).await;
-
-    let json_object: Value = serde_json::from_str(&response_text).expect(&format!("Couldn't create a json object form the response's text."));
-
-    let lore: String = json_object["data"][champion]["lore"].to_string();
-
-    lore
-}
 
 fn get_input() -> String{
     let mut user_input = String::new();
@@ -96,44 +202,14 @@ fn get_input() -> String{
     user_input
 }
 
-async fn askLanguage() -> String{
-    let languages: String = requestByURL(LANGUAGE_URL).await;
-    let language_list: Vec<String> = serde_json::from_str(&languages).expect(&format!("Couldn't create a json object form the response's text."));
-
-    for lang in language_list.chunks(5){
-        let s = format!("{:02?}", lang);
-        let s = s.replace('"', "").replace("[", "").replace("]", "").replace(" ", "  ");
-        println!("{}", s);
-    }
-
-    println!("Please choose a language from the list above ^:");
-    let user_input = get_input();
-    
-    getClosestMatch(user_input, language_list)
-}
-
-async fn askChampion(language: &str) -> String{
-    let url = CHAMPION_LIST_URL.replace("%LANGUAGE%", language).replace("%VERSION%", DDRAGON_VERSION);
-    
-    let response_text = requestByURL(&url).await;
-
-    let champion_list: champion::ChampionList = serde_json::from_str(&response_text).unwrap();
-
-    println!("Please input a champion name:"); 
-    let user_input = get_input();
-    
-    getClosestMatch(user_input, champion_list.data.keys().cloned().collect())
-}
 
 #[tokio::main]
 async fn main() {
     println!("Hellow, Welcome.\n");
 
-    let language = askLanguage().await;
-    println!("");
-    let champion = askChampion(&language).await;
+    let mut lore_reader = LoreReader::new();
 
-    let lore = getLore(&champion, &language).await;
-
-    println!("\nLore: {}", lore);
+    lore_reader.run().await;
 }
+
+

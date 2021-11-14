@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct ChampionList {
     pub r#type: String,
     pub format: String,
@@ -10,7 +10,7 @@ pub struct ChampionList {
     pub data: HashMap<String, Champion>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Champion {
     pub version: String,
     pub id: String,
@@ -25,7 +25,7 @@ pub struct Champion {
     pub stats: Stats,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Info {
     pub attack: f32,
     pub defense: f32,
@@ -33,7 +33,7 @@ pub struct Info {
     pub difficulty: f32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Image {
     pub full: String,
     pub sprite: String,
@@ -44,7 +44,7 @@ pub struct Image {
     pub h: f32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Stats {
     hp: f32,
     hpperlevel: f32,
