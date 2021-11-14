@@ -36,30 +36,36 @@ async fn requestByURL(url: &str) -> String{
     response_text
 }
 
-fn getClosestMatch(input: String, data: Vec<String>) -> (isize, String){
+fn getClosestMatch(input: String, data: Vec<String>) -> String{
+
+    fn newBestMatch(score: isize, name: &str) -> (isize, String) {
+        (score, name.to_string())
+    }
     let mut best_match: (isize, String) = (0, String::new());
 
-    let scoring = Scoring::emphasize_word_starts();
-
     for i in data.iter(){
-        let result = FuzzySearch::new(&input, i)
-            .score_with(&scoring)
-            .case_insensitive()
+        let result = FuzzySearch::new(&input, &i.to_lowercase())
+            .score_with(&Scoring::emphasize_word_starts())
             .best_match();
 
         match result{
             Some(r) => {
                 let score = r.score();
                 if score > best_match.0{
-                    best_match = (score, i.to_string());
-                    println!("New best match: {}, score: {}", i, score);
+                    best_match = newBestMatch(score, i)
                 }
             },
             None => ()
         }
+        if input == i.to_lowercase(){
+            best_match = newBestMatch(-1, i);
+
+            break
+        }
     }
 
-    best_match
+    println!("Best match: {}", best_match.1);
+    best_match.1
 }
 
 async fn getLore(champion: &str, language: &str) -> String{
@@ -92,29 +98,18 @@ fn get_input() -> String{
 
 async fn askLanguage() -> String{
     let languages: String = requestByURL(LANGUAGE_URL).await;
-    let language_list: Vec<&str> = serde_json::from_str(&languages).expect(&format!("Couldn't create a json object form the response's text."));
-    
-    let answer: String;
+    let language_list: Vec<String> = serde_json::from_str(&languages).expect(&format!("Couldn't create a json object form the response's text."));
 
-    loop{
-        println!("Please choose a language in this list:");
-
-        for lang in language_list.chunks(5){
-            let s = format!("{:02?}", lang);
-            let s = s.replace('"', "").replace("[", "").replace("]", "").replace(" ", "  ");
-            println!("{}", s);
-        }
-
-        let user_input: &str = &get_input();
-
-        if language_list.contains(&user_input){
-            answer = user_input.to_string();
-            break
-        }else{
-            println!("Invalid choise: {}\n", user_input);
-        }
+    for lang in language_list.chunks(5){
+        let s = format!("{:02?}", lang);
+        let s = s.replace('"', "").replace("[", "").replace("]", "").replace(" ", "  ");
+        println!("{}", s);
     }
-    answer
+
+    println!("Please choose a language from the list above ^:");
+    let user_input = get_input();
+    
+    getClosestMatch(user_input, language_list)
 }
 
 async fn askChampion(language: &str) -> String{
@@ -123,21 +118,19 @@ async fn askChampion(language: &str) -> String{
     let response_text = requestByURL(&url).await;
 
     let champion_list: champion::ChampionList = serde_json::from_str(&response_text).unwrap();
+
     println!("Please input a champion name:"); 
-    let best_match = getClosestMatch(get_input(), champion_list.data.keys().cloned().collect());
-
-       
-
-    best_match.1.to_string()
-
+    let user_input = get_input();
+    
+    getClosestMatch(user_input, champion_list.data.keys().cloned().collect())
 }
-
 
 #[tokio::main]
 async fn main() {
-    println!("Hellow, Welcome.");
+    println!("Hellow, Welcome.\n");
 
     let language = askLanguage().await;
+    println!("");
     let champion = askChampion(&language).await;
 
     let lore = getLore(&champion, &language).await;
