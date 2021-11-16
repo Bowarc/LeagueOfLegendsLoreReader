@@ -45,14 +45,13 @@ impl LoreReader{
         self.get_language_list().await;
         
         self.ask_language();
-        println!("");
 
         self.get_champion_list().await;
     }
 
     async fn run(&mut self){
         self.init().await;
-
+        println!("");
         self.ask_chamption();
         println!("");
 
@@ -124,7 +123,7 @@ impl LoreReader{
         self.selected_champion = selected_champion;
     }
 
-    async fn getLore(&self,) -> String{
+    async fn getLore(&self) -> String{
         if self.selected_champion == String::new(){
             return "Could not get the lore of a champ with empty name".to_string()
         }
@@ -206,5 +205,3 @@ async fn main() {
 
     lore_reader.run().await;
 }
-
-
