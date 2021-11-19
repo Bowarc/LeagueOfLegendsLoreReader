@@ -20,13 +20,14 @@ use tts;
 
 mod champion;
 
-const DDRAGON_VERSION: &str = "11.22.1";
+const DDRAGON_VERSION_URL: &str = "https://ddragon.leagueoflegends.com/api/versions.json";
 const CHAMPION_DATA_URL: &str = "https://ddragon.leagueoflegends.com/cdn/%VERSION%/data/%LANGUAGE%/champion/%CHAMPION%.json";
 const LANGUAGE_URL: &str = "https://ddragon.leagueoflegends.com/cdn/languages.json";
 const CHAMPION_LIST_URL:&str = "https://ddragon.leagueoflegends.com/cdn/%VERSION%/data/%LANGUAGE%/champion.json";
 
 
 struct LoreReader{
+    ddragon_latest_version: String,
     champion_list: champion::ChampionList,
     language_list: Vec<String>,
     selected_champion: String,
@@ -36,6 +37,7 @@ struct LoreReader{
 impl LoreReader{
     fn new() -> Self{
         Self{
+            ddragon_latest_version: String::new(),
             champion_list: Default::default(),
             language_list: Vec::new(),
             selected_champion: String::new(),
@@ -44,6 +46,8 @@ impl LoreReader{
     }
 
     async fn init(&mut self){
+        self.set_ddragon_version().await;
+
         self.get_language_list().await;
         
         self.ask_language();
@@ -60,9 +64,18 @@ impl LoreReader{
         let lore = self.getLore().await;
 
         println!("Lore: {}", lore);
-        speak(lore);
+        // speak(lore);
         
         // self.get_champion().await;
+    }
+
+    async fn set_ddragon_version(&mut self){
+        let version_data: String = requestByURL(DDRAGON_VERSION_URL).await;
+        let version_list: Vec<String> = serde_json::from_str(&version_data).expect(&format!("Couldn't transfrom version data to vec of string."));
+
+        self.ddragon_latest_version = version_list[0].clone();
+
+        println!("version: {}", self.ddragon_latest_version);
     }
 
     async fn get_language_list(&mut self) {
@@ -99,7 +112,7 @@ impl LoreReader{
     }
 
     async fn get_champion_list(&mut self){
-        let url = CHAMPION_LIST_URL.replace("%LANGUAGE%", &self.selected_language).replace("%VERSION%", DDRAGON_VERSION);
+        let url = CHAMPION_LIST_URL.replace("%LANGUAGE%", &self.selected_language).replace("%VERSION%", &self.ddragon_latest_version);
 
         let champion_data: String = requestByURL(&url).await;
 
@@ -133,7 +146,7 @@ impl LoreReader{
         let url: String = CHAMPION_DATA_URL
                             .replace("%CHAMPION%", &self.selected_champion)
                             .replace("%LANGUAGE%", &self.selected_language)
-                            .replace("%VERSION%", DDRAGON_VERSION);
+                            .replace("%VERSION%", &self.ddragon_latest_version);
 
         let response_text: String = requestByURL(&url).await;
 
