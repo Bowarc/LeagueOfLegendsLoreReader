@@ -64,7 +64,7 @@ impl LoreReader{
         let lore = self.getLore().await;
 
         println!("Lore: {}", lore);
-        // speak(lore);
+        speak(lore);
         
         // self.get_champion().await;
     }
