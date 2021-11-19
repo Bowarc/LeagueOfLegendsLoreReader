@@ -15,6 +15,8 @@
 use serde_json::Value; //Result
 use std::io;
 use sublime_fuzzy::{FuzzySearch, Scoring};
+use tts;
+
 
 mod champion;
 
@@ -58,6 +60,7 @@ impl LoreReader{
         let lore = self.getLore().await;
 
         println!("Lore: {}", lore);
+        speak(lore);
         
         // self.get_champion().await;
     }
@@ -142,6 +145,14 @@ impl LoreReader{
     }
 }
 
+fn speak(text: String){
+    let mut speech = tts::Tts::new(tts::Backends::WinRt).unwrap();
+    speech.set_volume(0.03);
+    speech.speak(text, false).unwrap();
+
+    // println!("Volume: {:?}", speech.get_volume());
+    let t = get_input();
+}
 async fn requestByURL(url: &str) -> String{
     let r: reqwest::Response = reqwest::get(url).await.expect(&format!("Couldn't get a response for the given url: \n {}.", url));
 
