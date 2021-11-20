@@ -17,14 +17,12 @@ use std::io;
 use sublime_fuzzy::{FuzzySearch, Scoring};
 use tts;
 
-
 mod champion;
 
 const DDRAGON_VERSION_URL: &str = "https://ddragon.leagueoflegends.com/api/versions.json";
 const CHAMPION_DATA_URL: &str = "https://ddragon.leagueoflegends.com/cdn/%VERSION%/data/%LANGUAGE%/champion/%CHAMPION%.json";
 const LANGUAGE_URL: &str = "https://ddragon.leagueoflegends.com/cdn/languages.json";
 const CHAMPION_LIST_URL:&str = "https://ddragon.leagueoflegends.com/cdn/%VERSION%/data/%LANGUAGE%/champion.json";
-
 
 struct LoreReader{
     ddragon_latest_version: String,
@@ -160,12 +158,13 @@ impl LoreReader{
 
 fn speak(text: String){
     let mut speech = tts::Tts::new(tts::Backends::WinRt).unwrap();
-    speech.set_volume(0.03);
+    speech.set_volume(0.03).unwrap();
     speech.speak(text, false).unwrap();
 
     // println!("Volume: {:?}", speech.get_volume());
-    let t = get_input();
+    let _ = get_input();
 }
+
 async fn requestByURL(url: &str) -> String{
     let r: reqwest::Response = reqwest::get(url).await.expect(&format!("Couldn't get a response for the given url: \n {}.", url));
 
